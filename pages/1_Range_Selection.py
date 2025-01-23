@@ -4,6 +4,7 @@ import json
 import pandas as pd
 import streamlit as st
 
+# Config
 st.set_page_config(
     page_title="Spotify Super Wrapped",
     page_icon=":material/play_circle:",
@@ -31,12 +32,12 @@ df_2024["day"] = df_2024["ts"].dt.day
 
 df_2024 = df_2024[df_2024["episode_name"].isnull()].reset_index(drop=True)
 
-# App
+# Start Streamlit app
 st.title("Spotify Super Wrapped")
 today = datetime.date.today()
 
-date, reset = st.columns([2, 1])
 # Set date range
+date, _ = st.columns([3, 2])
 start_date, end_date = date.date_input(
     "Select the period",
     [
@@ -105,7 +106,7 @@ least_played_artist.metric(
     delta_color="off",
 )
 
-st.write(df_selected)
+# st.write(df_selected)
 st.line_chart(
     df_selected.groupby(df_selected["ts"].dt.date).size(),
     x_label="Date",
