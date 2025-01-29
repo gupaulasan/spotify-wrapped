@@ -171,7 +171,8 @@ cython_debug/
 .pypirc
 
 # Data
-/data
+/data/*.json
+/data/*.pdf
 
 #MacOS
 .DS_Store
