@@ -1,8 +1,17 @@
 import datetime
-import json
+import sqlite3
 
 import pandas as pd
+import plotly.graph_objects as go
 import streamlit as st
+
+
+def convert_date(date):
+    return datetime.datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ")
+
+
+sqlite3.register_converter("DATETIME", convert_date)
+
 
 # Config
 st.set_page_config(
@@ -10,110 +19,142 @@ st.set_page_config(
     page_icon=":material/play_circle:",
     layout="wide",
 )
-
-# Data prep
-with open("data/Streaming_History_Audio_2023-2024_8.json") as file:
-    data_2324 = json.load(file)
-
-with open("data/Streaming_History_Audio_2024-2025_9.json") as file:
-    data_2425 = json.load(file)
-
-df_2324 = pd.DataFrame(data_2324)
-df_2425 = pd.DataFrame(data_2425)
-
-df_complete = pd.concat([df_2324, df_2425]).reset_index(drop=True)
-
-df_2024 = df_complete[df_complete["ts"].str.contains("2024")].reset_index(drop=True)
-df_2024["ts"] = pd.to_datetime(df_2024["ts"])
-
-df_2024["year"] = df_2024["ts"].dt.year
-df_2024["month"] = df_2024["ts"].dt.month
-df_2024["day"] = df_2024["ts"].dt.day
-
-df_2024 = df_2024[df_2024["episode_name"].isnull()].reset_index(drop=True)
-
-# Start Streamlit app
 st.title("Spotify Super Wrapped")
 today = datetime.date.today()
-
 # Set date range
-date, _ = st.columns([3, 2])
-start_date, end_date = date.date_input(
-    "Select the period",
-    [
-        datetime.datetime(2024, 1, 1),
-        datetime.datetime(2024, 12, 31),
-    ],
+s_date, e_date = st.columns([1, 1])
+start_date = s_date.date_input(
+    "Select the starting date",
+    datetime.datetime(2015, 10, 18),
     format="DD/MM/YYYY",
+    min_value=datetime.datetime(2015, 10, 18),
 )
 
-df_selected = df_2024[
-    (df_2024["ts"] >= str(start_date))
-    & (df_2024["ts"] <= str(end_date + datetime.timedelta(days=1)))
-].reset_index(drop=True)
+end_date = e_date.date_input("Select the end date", today, format=("DD/MM/YYYY"))
+# Data import
+conn = sqlite3.connect("data/my_spotify_data.db")
+cur = conn.cursor()
 
-df_selected["cum_plays"] = df_selected.reset_index(drop=False).index + 1
+cur.execute(
+    """
+    SELECT *
+    FROM logs l
+    JOIN tracks t USING (track_id)
+    WHERE DATETIME(timestamp) >= ? AND DATETIME(timestamp) <= ?
+    AND track_id IS NOT NULL
+    """,
+    (start_date, end_date + datetime.timedelta(days=1)),
+)
+data = cur.fetchall()
+columns = [description[0] for description in cur.description]
 
-df_selected["total_skips"] = df_selected.groupby("master_metadata_track_name")[
-    "skipped"
-].cumsum()
+df = pd.DataFrame(data, columns=columns)
+df["timestamp"] = pd.to_datetime(df["timestamp"], format="%Y-%m-%dT%H:%M:%SZ")
+df = df.sort_values("timestamp")
+
+# Start Streamlit app
+
+df["total_skips"] = df.groupby("track_id")["skipped"].cumsum()
+st.dataframe(df.head(2))
 
 total_plays, total_hours, unique_artists, unique_songs = st.columns(4)
-total_plays.metric("Total plays", str(df_selected.shape[0]) + " plays")
-total_hours.metric(
-    "Total hours", format(df_selected["ms_played"].sum() / 3.6e6, ".0f") + "h"
-)
+total_plays.metric("Total plays", str(df.shape[0]) + " plays")
+total_hours.metric("Total hours", format(df["ms_played"].sum() / 3.6e6, ".0f") + "h")
 unique_artists.metric(
     "Unique artists",
-    str(df_selected["master_metadata_album_artist_name"].nunique()) + " artists",
+    str(df["artist_name"].nunique()) + " artists",
 )
-unique_songs.metric(
-    "Unique songs", str(df_selected["master_metadata_track_name"].nunique()) + " songs"
-)
+unique_songs.metric("Unique songs", str(df["track_id"].nunique()) + " songs")
 
-most_played_artist, most_played_song, most_skipped_song, least_played_artist = (
-    st.columns(4)
-)
+most_played_artist, most_played_song, most_skipped_song = st.columns(3)
 
 most_played_artist.metric(
     "Most played artist",
-    df_selected["master_metadata_album_artist_name"].value_counts().idxmax(),
-    df_selected["master_metadata_album_artist_name"].value_counts().max().astype(str)
-    + " plays",
+    df["artist_name"].value_counts().idxmax(),
+    df["artist_name"].value_counts().max().astype(str) + " plays",
     delta_color="off",
 )
 
 most_played_song.metric(
     "Most played song",
-    df_selected["master_metadata_track_name"].value_counts().idxmax(),
-    df_selected["master_metadata_track_name"].value_counts().max().astype(str)
-    + " plays",
+    df["track_name"].value_counts().idxmax(),
+    df["track_name"].value_counts().max().astype(str) + " plays",
     delta_color="off",
 )
 
 most_skipped_song.metric(
     "Most skipped song",
-    df_selected["master_metadata_track_name"].iloc[df_selected["total_skips"].idxmax()],
-    str(df_selected["total_skips"].max()) + " skips",
+    df["track_name"].iloc[df["total_skips"].idxmax()],
+    str(df["total_skips"].max()) + " skips",
     delta_color="off",
 )
 
-least_played_artist.metric(
-    "Least played artist",
-    df_selected["master_metadata_album_artist_name"].value_counts().idxmin(),
-    str(df_selected["master_metadata_album_artist_name"].value_counts().min())
-    + " plays",
-    delta_color="off",
+df["year"] = df["timestamp"].dt.year
+df["month"] = df["timestamp"].dt.month
+year_month_count = df.groupby(["year", "month"]).size()
+month_count = year_month_count.groupby("month").mean()
+month_sum = (
+    df.groupby("month")["ms_played"].mean() / 60_000
+)  # average minutes per month
+
+month_count_plot = go.Figure(
+    data=[go.Bar(y=month_count, x=month_count.index)],
 )
 
-# st.write(df_selected)
+month_count_plot.update_layout(
+    xaxis=dict(
+        tickvals=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        ticktext=[
+            "Jan.",
+            "Feb.",
+            "Mar.",
+            "Apr.",
+            "May",
+            "Jun.",
+            "Jul.",
+            "Aug.",
+            "Sep.",
+            "Oct.",
+            "Nov.",
+            "Dec.",
+        ],
+    ),
+    title=dict(text="Average plays per month of the year"),
+)
+month_count_plot.update_xaxes(title_text="Month of the year")
+month_count_plot.update_yaxes(title_text="Avg. # of plays")
+
+st.plotly_chart(month_count_plot)
+
+month_sum_plot = go.Figure()
+month_sum_plot.add_trace(go.Bar(y=month_sum, x=month_sum.index))
+month_sum_plot.update_layout(
+    xaxis=dict(
+        tickvals=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        ticktext=[
+            "Jan.",
+            "Feb.",
+            "Mar.",
+            "Apr.",
+            "May",
+            "Jun.",
+            "Jul.",
+            "Aug.",
+            "Sep.",
+            "Oct.",
+            "Nov.",
+            "Dec.",
+        ],
+    ),
+    title=dict(text="Average minutes played per month of the year"),
+)
+month_sum_plot.update_xaxes(title_text="Month of the year")
+month_sum_plot.update_yaxes(title_text="Avg. minutes played")
+
+st.plotly_chart(month_sum_plot)
+
 st.line_chart(
-    df_selected.groupby(df_selected["ts"].dt.date).size(),
+    df.groupby(df["timestamp"].dt.date).size(),
     x_label="Date",
     y_label="Songs played",
-)
-st.area_chart(
-    df_selected.groupby(df_selected["ts"].dt.date)["cum_plays"].max(),
-    x_label="Date",
-    y_label="Cumulative songs played",
 )
