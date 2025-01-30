@@ -4,9 +4,10 @@ st.set_page_config(
     page_title="Spotify Super Wrapped",
     page_icon=":material/play_circle:",
     layout="wide",
+    initial_sidebar_state="collapsed",
 )
 
-st.write("# Super Spotify Wrapped")
+st.write("# Spotify Super Wrapped")
 
 st.markdown(
     """
