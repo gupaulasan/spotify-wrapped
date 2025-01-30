@@ -89,16 +89,27 @@ most_skipped_song.metric(
     delta_color="off",
 )
 
+# Compute temporal stats
 df["year"] = df["timestamp"].dt.year
 df["month"] = df["timestamp"].dt.month
+
+# Compute
 year_month_count = df.groupby(["year", "month"]).size()
 month_count = year_month_count.groupby("month").mean()
 month_sum = (
-    df.groupby("month")["ms_played"].mean() / 60_000
+    df.groupby(["year", "month"])["ms_played"]
+    .sum()
+    .reset_index(drop=False)
+    .groupby("month")["ms_played"]
+    .mean()
+    / 3_600_000
 )  # average minutes per month
 
+mean_plays = (df.shape[0] / df["year"].nunique()) / 12
+
+# Define plots
 month_count_plot = go.Figure(
-    data=[go.Bar(y=month_count, x=month_count.index)],
+    data=[go.Bar(y=month_count, x=month_count.index, marker_color="#1DB954")],
 )
 
 month_count_plot.update_layout(
@@ -127,7 +138,7 @@ month_count_plot.update_yaxes(title_text="Avg. # of plays")
 st.plotly_chart(month_count_plot)
 
 month_sum_plot = go.Figure()
-month_sum_plot.add_trace(go.Bar(y=month_sum, x=month_sum.index))
+month_sum_plot.add_trace(go.Bar(y=month_sum, x=month_sum.index, marker_color="#1DB954"))
 month_sum_plot.update_layout(
     xaxis=dict(
         tickvals=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
@@ -146,15 +157,15 @@ month_sum_plot.update_layout(
             "Dec.",
         ],
     ),
-    title=dict(text="Average minutes played per month of the year"),
+    title=dict(text="Average hours played per month of the year"),
 )
 month_sum_plot.update_xaxes(title_text="Month of the year")
-month_sum_plot.update_yaxes(title_text="Avg. minutes played")
+month_sum_plot.update_yaxes(title_text="Avg. hours played")
 
 st.plotly_chart(month_sum_plot)
 
-st.line_chart(
-    df.groupby(df["timestamp"].dt.date).size(),
-    x_label="Date",
-    y_label="Songs played",
-)
+# st.line_chart(
+#     df.groupby(df["timestamp"].dt.date).size(),
+#     x_label="Date",
+#     y_label="Songs played",
+# )
