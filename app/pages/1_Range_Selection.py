@@ -55,7 +55,6 @@ df = df.sort_values("timestamp")
 # Start Streamlit app
 
 df["total_skips"] = df.groupby("track_id")["skipped"].cumsum()
-st.dataframe(df.head(2))
 
 total_plays, total_hours, unique_artists, unique_songs = st.columns(4)
 total_plays.metric("Total plays", str(df.shape[0]) + " plays")
@@ -163,9 +162,3 @@ month_sum_plot.update_xaxes(title_text="Month of the year")
 month_sum_plot.update_yaxes(title_text="Avg. hours played")
 
 st.plotly_chart(month_sum_plot)
-
-# st.line_chart(
-#     df.groupby(df["timestamp"].dt.date).size(),
-#     x_label="Date",
-#     y_label="Songs played",
-# )
