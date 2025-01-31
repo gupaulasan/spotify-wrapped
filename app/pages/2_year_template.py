@@ -21,9 +21,9 @@ def format_time(milliseconds):
 sqlite3.register_converter("DATETIME", convert_date)
 
 # Config
-year = 2024
-first_of_the_year = datetime.date(year, 1, 1)
-last_of_the_year = datetime.date(year, 12, 31)
+YEAR = 2024
+first_of_the_year = datetime.date(YEAR, 1, 1)
+last_of_the_year = datetime.date(YEAR, 12, 31)
 
 st.set_page_config(
     page_title="Spotify Super Wrapped",
@@ -31,10 +31,10 @@ st.set_page_config(
     layout="wide",
 )
 
-st.title(f"{year} Spotify Wrapped")
+st.title(f"{YEAR} Spotify Wrapped")
 
 st.write(
-    f"This page presents a detailed analysis of your Spotify data for the year {year}."
+    f"This page presents a detailed analysis of your Spotify data for the year {YEAR}."
 )
 
 con = sqlite3.connect("data/my_spotify_data.db")
@@ -62,10 +62,24 @@ group_by_artist = (
 )
 
 top_artists_text = "\n".join(
-    f"{i + 1}. **{artist}** with a total of {format_time(group_by_artist[i])}, played across {top_10_artists.loc[artist]} plays"
+    f"{i + 1}. **{artist}**: {format_time(group_by_artist[i])}, across {top_10_artists.loc[artist]} plays"
     for i, artist in enumerate(group_by_artist.index[:10])
 )
 
 st.write(
-    f"## Top 10 artists\n\nHere are your top 10 artists of {year}\n\n{top_artists_text}"
+    f"## Top 10 artists\n\nHere are your top 10 artists of {YEAR}\n\n{top_artists_text}"
+)
+
+top_10_albums = df["album_name"].value_counts()
+group_by_album = (
+    df.groupby("album_name")["ms_played"].sum().sort_values(ascending=False)
+)
+
+top_albums_text = "\n".join(
+    f"{i + 1}. **{album}**: {format_time(group_by_album[i])}, across {top_10_albums.loc[album]} plays"
+    for i, album in enumerate(group_by_album.index[:10])
+)
+
+st.write(
+    f"## Top 10 albums\n\nHere are your top 10 albums of {YEAR}\n\n{top_albums_text}"
 )
