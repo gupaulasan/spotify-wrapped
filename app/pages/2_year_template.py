@@ -21,7 +21,7 @@ def format_time(milliseconds):
 sqlite3.register_converter("DATETIME", convert_date)
 
 # Config
-YEAR = 2024
+YEAR = 2022
 first_of_the_year = datetime.date(YEAR, 1, 1)
 last_of_the_year = datetime.date(YEAR, 12, 31)
 
@@ -56,9 +56,9 @@ columns = [description[0] for description in cur.description]
 
 df = pd.DataFrame(data, columns=columns).sort_values("timestamp")
 
-top_10_artists = df["artist_name"].value_counts().head(10)
+top_10_artists = df["artist_name"].value_counts()
 group_by_artist = (
-    df.groupby("artist_name")["ms_played"].sum().sort_values(ascending=False).head(10)
+    df.groupby("artist_name")["ms_played"].sum().sort_values(ascending=False)
 )
 
 top_artists_text = "\n".join(
