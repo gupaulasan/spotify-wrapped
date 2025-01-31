@@ -25,12 +25,14 @@ today = datetime.date.today()
 s_date, e_date = st.columns([1, 1])
 start_date = s_date.date_input(
     "Select the starting date",
-    datetime.datetime(2015, 10, 18),
+    datetime.datetime(2024, 1, 1),
     format="DD/MM/YYYY",
     min_value=datetime.datetime(2015, 10, 18),
 )
 
-end_date = e_date.date_input("Select the end date", today, format=("DD/MM/YYYY"))
+end_date = e_date.date_input(
+    "Select the end date", datetime.datetime(2024, 12, 31), format=("DD/MM/YYYY")
+)
 # Data import
 conn = sqlite3.connect("data/my_spotify_data.db")
 cur = conn.cursor()
