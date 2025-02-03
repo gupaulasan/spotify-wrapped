@@ -63,7 +63,7 @@ group_by_artist = (
 )
 
 top_artists_text = "\n".join(
-    f"{i + 1}. **{artist}**: {format_time(group_by_artist[i])}, across {top_10_artists.loc[artist]} plays"
+    f"{i + 1}. **{artist}**: {format_time(group_by_artist.iloc[i])}, across {top_10_artists.loc[artist]} plays"
     for i, artist in enumerate(group_by_artist.index[:10])
 )
 
@@ -77,7 +77,7 @@ group_by_album = (
 )
 
 top_albums_text = "\n".join(
-    f"{i + 1}. **{album} ({df.loc[lambda df: df['album_name'] == album].iloc[0]['artist_name']})**: {format_time(group_by_album[i])}, across {top_10_albums.loc[album]} plays"
+    f"{i + 1}. **{album} ({df.loc[lambda df: df['album_name'] == album].iloc[0]['artist_name']})**: {format_time(group_by_album.iloc[i])}, across {top_10_albums.loc[album]} plays"
     for i, album in enumerate(group_by_album.index[:10])
 )
 
@@ -91,7 +91,7 @@ group_by_track = (
 )
 
 top_tracks_text = "\n".join(
-    f"{i + 1}. **{track} ({df.loc[lambda df: df['track_name'] == track].iloc[0]['artist_name']})** {format_time(group_by_track[i])}, across {top_10_tracks.loc[track]} plays"
+    f"{i + 1}. **{track} ({df.loc[lambda df: df['track_name'] == track].iloc[0]['artist_name']})** {format_time(group_by_track.iloc[i])}, across {top_10_tracks.loc[track]} plays"
     for i, track in enumerate(group_by_track.index[:10])
 )
 
