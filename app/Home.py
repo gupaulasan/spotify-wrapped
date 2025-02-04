@@ -9,7 +9,7 @@ st.set_page_config(
 )
 
 conn = st.connection("gcs", type=FilesConnection)
-db = conn.read("")
+db = conn.read("spotify-streamlit-app-db/my_spotify_data.db")
 
 st.write("# Spotify Super Wrapped")
 
