@@ -1,9 +1,5 @@
-import os
-
 import streamlit as st
-from google.cloud import storage
-
-os.chdir("./")
+from st_files_connection import FilesConnection
 
 st.set_page_config(
     page_title="Spotify Super Wrapped",
@@ -12,23 +8,8 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# Configurar credenciais (salve o JSON na pasta do projeto)
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "spotify-data-2710-572835308829.json"
-
-
-def download_db(bucket_name, source_blob_name, destination_file_name):
-    """Baixa o banco do Google Cloud Storage"""
-    storage_client = storage.Client()
-    bucket = storage_client.bucket(bucket_name)
-    blob = bucket.blob(source_blob_name)
-    blob.download_to_filename(destination_file_name)
-
-
-# Baixando o banco
-BUCKET_NAME = "spotify-streamlit-app-db"
-DB_FILE = "my_spotify_data.db"
-
-download_db(BUCKET_NAME, DB_FILE, DB_FILE)
+conn = st.connection("gcs", type=FilesConnection)
+db = conn.read("")
 
 st.write("# Spotify Super Wrapped")
 
