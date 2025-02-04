@@ -34,7 +34,7 @@ end_date = e_date.date_input(
     "Select the end date", datetime.datetime(2024, 12, 31), format=("DD/MM/YYYY")
 )
 # Data import
-conn = sqlite3.connect("data/my_spotify_data.db")
+conn = sqlite3.connect("my_spotify_data.db")
 cur = conn.cursor()
 
 cur.execute(

@@ -38,7 +38,7 @@ st.write(
     f"This page presents a detailed analysis of your Spotify data for the year {YEAR}."
 )
 
-con = sqlite3.connect("data/my_spotify_data.db")
+con = sqlite3.connect("my_spotify_data.db")
 cur = con.cursor()
 
 cur.execute(
