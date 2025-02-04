@@ -1,5 +1,4 @@
 import streamlit as st
-from st_files_connection import FilesConnection
 
 st.set_page_config(
     page_title="Spotify Super Wrapped",
@@ -7,9 +6,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed",
 )
-
-conn = st.connection("gcs", type=FilesConnection)
-db = conn.read("spotify-streamlit-app-db/my_spotify_data.db")
 
 st.write("# Spotify Super Wrapped")
 

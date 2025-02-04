@@ -3,6 +3,7 @@ import sqlite3
 
 import pandas as pd
 import streamlit as st
+from st_files_connection import FilesConnection
 
 
 def convert_date(date):
@@ -30,7 +31,9 @@ st.set_page_config(
 year_select, _ = st.columns([1, 2])
 YEAR = year_select.selectbox("Select the year you want to analyse", range(2015, 2025))
 first_of_the_year = datetime.date(YEAR, 1, 1)
+first_of_the_year = pd.to_datetime(first_of_the_year, format="%Y-%m-%dT%H:%M:%SZ")
 last_of_the_year = datetime.date(YEAR, 12, 31)
+last_of_the_year = pd.to_datetime(last_of_the_year, format="%Y-%m-%dT%H:%M:%SZ")
 
 st.title(f"{YEAR} Stats")
 
@@ -38,24 +41,38 @@ st.write(
     f"This page presents a detailed analysis of your Spotify data for the year {YEAR}."
 )
 
-con = sqlite3.connect("my_spotify_data.db")
-cur = con.cursor()
+## LEGACY CODE USING SQLite
+# conn = sqlite3.connect("my_spotify_data.db")
+# cur = conn.cursor()
 
-cur.execute(
-    """
-    SELECT *
-    FROM logs l
-    JOIN tracks t USING (track_id)
-    WHERE DATETIME(timestamp) >= ? AND DATETIME(timestamp) <= ?
-    AND track_id IS NOT NULL
-    """,
-    (first_of_the_year, last_of_the_year + datetime.timedelta(days=1)),
-)
+# cur.execute(
+#     """
+#     SELECT *
+#     FROM logs l
+#     JOIN tracks t USING (track_id)
+#     WHERE DATETIME(timestamp) >= ? AND DATETIME(timestamp) <= ?
+#     AND track_id IS NOT NULL
+#     """,
+#     (start_date, end_date + datetime.timedelta(days=1)),
+# )
+# data = cur.fetchall()
+# columns = [description[0] for description in cur.description]
 
-data = cur.fetchall()
-columns = [description[0] for description in cur.description]
+# df = pd.DataFrame(data, columns=columns)
 
-df = pd.DataFrame(data, columns=columns).sort_values("timestamp")
+# Data import
+conn = st.connection("gcs", type=FilesConnection)
+logs = conn.read("spotify-streamlit-app-db/logs.csv")
+logs["timestamp"] = pd.to_datetime(logs["timestamp"], format="%Y-%m-%dT%H:%M:%SZ")
+
+logs = logs[
+    (logs["timestamp"] >= first_of_the_year) & (logs["timestamp"] <= last_of_the_year)
+]
+tracks = conn.read("spotify-streamlit-app-db/tracks.csv")
+
+df = pd.merge(logs, tracks, on="track_id", suffixes=("_l", "_t"))
+
+df = df.sort_values("timestamp")
 
 top_10_artists = df["artist_name"].value_counts()
 group_by_artist = (

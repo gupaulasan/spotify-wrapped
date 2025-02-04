@@ -4,6 +4,7 @@ import sqlite3
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+from st_files_connection import FilesConnection
 
 
 def convert_date(date):
@@ -33,25 +34,38 @@ start_date = s_date.date_input(
 end_date = e_date.date_input(
     "Select the end date", datetime.datetime(2024, 12, 31), format=("DD/MM/YYYY")
 )
+## LEGACY CODE USING SQLite
+# conn = sqlite3.connect("my_spotify_data.db")
+# cur = conn.cursor()
+
+# cur.execute(
+#     """
+#     SELECT *
+#     FROM logs l
+#     JOIN tracks t USING (track_id)
+#     WHERE DATETIME(timestamp) >= ? AND DATETIME(timestamp) <= ?
+#     AND track_id IS NOT NULL
+#     """,
+#     (start_date, end_date + datetime.timedelta(days=1)),
+# )
+# data = cur.fetchall()
+# columns = [description[0] for description in cur.description]
+
+# df = pd.DataFrame(data, columns=columns)
+
 # Data import
-conn = sqlite3.connect("my_spotify_data.db")
-cur = conn.cursor()
+conn = st.connection("gcs", type=FilesConnection)
+logs = conn.read("spotify-streamlit-app-db/logs.csv")
+logs["timestamp"] = pd.to_datetime(logs["timestamp"], format="%Y-%m-%dT%H:%M:%SZ")
 
-cur.execute(
-    """
-    SELECT *
-    FROM logs l
-    JOIN tracks t USING (track_id)
-    WHERE DATETIME(timestamp) >= ? AND DATETIME(timestamp) <= ?
-    AND track_id IS NOT NULL
-    """,
-    (start_date, end_date + datetime.timedelta(days=1)),
-)
-data = cur.fetchall()
-columns = [description[0] for description in cur.description]
+logs = logs[
+    (logs["timestamp"] >= pd.to_datetime(start_date, format="%Y-%m-%dT%H:%M:%SZ"))
+    & (logs["timestamp"] <= pd.to_datetime(end_date, format="%Y-%m-%dT%H:%M:%SZ"))
+]
+tracks = conn.read("spotify-streamlit-app-db/tracks.csv")
 
-df = pd.DataFrame(data, columns=columns)
-df["timestamp"] = pd.to_datetime(df["timestamp"], format="%Y-%m-%dT%H:%M:%SZ")
+df = pd.merge(logs, tracks, on="track_id", suffixes=("_l", "_t"))
+
 df = df.sort_values("timestamp")
 
 # Start Streamlit app
