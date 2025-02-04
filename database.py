@@ -6,6 +6,7 @@ import json
 import os
 import sqlite3
 
+import pandas as pd
 from tqdm import tqdm
 
 # Database and data directory
@@ -134,3 +135,13 @@ with sqlite3.connect(DB_PATH) as con:
 
     # Commit all changes
     con.commit()
+
+
+with sqlite3.connect(DB_PATH) as conn:
+    tables = pd.read_sql_query(
+        "SELECT name FROM sqlite_master WHERE type='table';", con=conn
+    )
+
+    for table in tables["name"]:
+        df = pd.read_sql_query(f"SELECT * FROM {table}", conn)
+        df.to_csv(f"data/{table}.csv", index=False)
