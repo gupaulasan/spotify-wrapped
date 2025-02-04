@@ -19,4 +19,6 @@ dependencies = [
     "streamlit>=1.41.1",
     "tqdm>=4.67.1",
     "watchdog>=6.0.0",
+    "gcsfs>=2025.2.0",
+    "st-files-connection>=0.1.0",
 ]
